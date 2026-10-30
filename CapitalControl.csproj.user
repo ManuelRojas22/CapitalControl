@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup />
+  <ItemGroup>
+    <Compile Update="ContributeGoalForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Controls\DebtsCreditsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Controls\GradientPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="Controls\HistoryForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Controls\MembershipsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Controls\RoundedButton.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="Controls\RoundedPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="Controls\SavingsGoalsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="DashboardForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="DebtEditForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="DebtsCreditsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="GoalEditForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="HistoryForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="LoginForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MainForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MembershipEditForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MembershipsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="PayDebtForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="RegisterForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="SavingsGoalsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="TransactionForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>CapitalControl</RootNamespace>
+    <AssemblyName>CapitalControl</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <ApplicationIcon />
+    <!-- Vista previa WinForms (Landing -> Login -> Registro) como arranque por defecto.
+         Para ejecutar la app WPF completa (Dashboard, Historial, Metas, etc.)
+         cambia esta linea a: <StartupObject>CapitalControl.Program</StartupObject>
+         o eliminala por completo. -->
+    <StartupObject>CapitalControl.Program</StartupObject>
+  </PropertyGroup>
+
+</Project>

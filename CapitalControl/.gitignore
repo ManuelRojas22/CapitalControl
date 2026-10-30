@@ -1,0 +1,31 @@
+# ============================================================================
+# .gitignore - Proyecto CapitalControl (.NET / WinForms)
+# ============================================================================
+
+# Build outputs
+bin/
+obj/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.csproj.user
+*.DotSettings.user
+
+# NuGet packages
+packages/
+*.nupkg
+
+# Temporary files
+*.log
+*.tmp
+*.temp
+
+# IDE
+.idea/
+*.sln.dotsettings
+
+# OS
+Thumbs.db
+.DS_Store
