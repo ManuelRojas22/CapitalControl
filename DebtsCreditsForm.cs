@@ -47,6 +47,8 @@ namespace CapitalControl
 
             this.Load += DebtsCreditsForm_Load;
             this.Resize += DebtsCreditsForm_Resize;
+            // Recargar la tabla cada vez que se muestra (los datos llegan después del login)
+            this.VisibleChanged += (s, e) => { if (Visible) Refresh(); };
 
             WireEvents();
             Refresh();
@@ -407,7 +409,7 @@ namespace CapitalControl
                 dlg.Text = "Nueva Deuda";
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
-                AppData.Debts.Insert(0, new Debt
+                BaseDatos.InsertarDeuda(new Debt
                 {
                     Creditor = dlg.DebtCreditor,
                     IsBank = dlg.DebtIsBank,
@@ -434,7 +436,7 @@ namespace CapitalControl
                 d.Paid = Math.Min(dlg.DebtTotal, dlg.DebtPaid);
                 d.DueDate = dlg.DebtDueDate;
                 d.InterestRate = dlg.DebtInterestRate;
-                d.RaiseAll();
+                BaseDatos.ActualizarDeuda(d);
 
                 Refresh();
             }
@@ -448,9 +450,9 @@ namespace CapitalControl
 
                 decimal amount = dlg.PaymentAmount;
                 d.Paid = Math.Min(d.Total, d.Paid + amount);
-                d.RaiseAll();
+                if (!BaseDatos.ActualizarDeuda(d)) return;
 
-                AppData.Transactions.Insert(0, new Transaction
+                BaseDatos.InsertarTransaccion(new Transaction
                 {
                     Date = DateTime.Today,
                     Type = TxType.Gasto,

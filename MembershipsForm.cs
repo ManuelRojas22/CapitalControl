@@ -46,6 +46,8 @@ namespace CapitalControl
 
             this.Load += MembershipsForm_Load;
             this.Resize += MembershipsForm_Resize;
+            // Recargar la tabla cada vez que se muestra (los datos llegan después del login)
+            this.VisibleChanged += (s, e) => { if (Visible) Refresh(); };
 
             WireEvents();
             Refresh();
@@ -402,7 +404,7 @@ namespace CapitalControl
             else
             {
                 s.IsActive = true;
-                s.RaiseAll();
+                BaseDatos.ActualizarMembresia(s);
                 Refresh();
             }
         }
@@ -425,7 +427,7 @@ namespace CapitalControl
                 s.Cost = dlg.MembershipCost;
                 s.BillingDay = dlg.MembershipBillingDay;
                 if (!string.IsNullOrWhiteSpace(dlg.MembershipLogo)) s.Logo = dlg.MembershipLogo;
-                s.RaiseAll();
+                BaseDatos.ActualizarMembresia(s);
                 Refresh();
             }
         }
@@ -442,7 +444,7 @@ namespace CapitalControl
             if (r != DialogResult.Yes) return;
 
             s.IsActive = false;
-            s.RaiseAll();
+            BaseDatos.ActualizarMembresia(s);
             Refresh();
         }
 
@@ -453,7 +455,7 @@ namespace CapitalControl
                 dlg.Text = "Nueva Membresia";
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
-                AppData.Subscriptions.Insert(0, new Subscription
+                BaseDatos.InsertarMembresia(new Subscription
                 {
                     Name = dlg.MembershipName,
                     Cost = dlg.MembershipCost,

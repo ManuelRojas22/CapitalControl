@@ -331,7 +331,28 @@ namespace CapitalControl
 
             if (!valid) return;
 
+            string nombre;
+            try
+            {
+                nombre = Conexion.ValidarUsuario(email, password);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("No se pudo conectar a la base de datos:\n" + ex.Message);
+                return;
+            }
+
+            if (nombre == null)
+            {
+                Show(lblPasswordError, "Correo o contraseña incorrectos");
+                return;
+            }
+
             AppData.UserEmail = email;
+            AppData.UserName = nombre;
+            AppData.UserId = BaseDatos.ObtenerIdUsuario(email);
+            if (!BaseDatos.CargarDatosUsuario()) return;
+
             btnLogin.Enabled = false;
             btnLogin.Text = "Iniciando sesion...";
 

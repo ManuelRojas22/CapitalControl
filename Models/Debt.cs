@@ -2,6 +2,7 @@ namespace CapitalControl.Models
 {
     public class Debt
     {
+        public int Id { get; set; }
         public string Name { get; set; }
         public decimal Amount { get; set; }
         public string Creditor { get; set; }
@@ -17,6 +18,20 @@ namespace CapitalControl.Models
         public string RemainingLabel { get; set; }
         public string DueLabel { get; set; }
         public int DaysToDue { get; set; }
-        public void RaiseAll() { }
+
+        // Recalcula los textos que se muestran en la tabla
+        public void RaiseAll()
+        {
+            decimal remaining = Total - Paid;
+            double progress = Total > 0 ? (double)(Paid / Total) : 0;
+
+            DaysToDue = (DueDate.Date - System.DateTime.Today).Days;
+            TypeIcon = IsBank ? "\U0001F3E6" : "\U0001F464";
+            ProgressLabel = Fmt.Percent(progress);
+            TotalLabel = Fmt.Money(Total);
+            PaidLabel = Fmt.Money(Paid);
+            RemainingLabel = Fmt.Money(remaining);
+            DueLabel = Fmt.Date(DueDate) + " (" + DaysToDue + " días)";
+        }
     }
 }

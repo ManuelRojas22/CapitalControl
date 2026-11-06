@@ -2,6 +2,7 @@ namespace CapitalControl.Models
 {
     public class Subscription
     {
+        public int Id { get; set; }
         public string Name { get; set; }
         public decimal MonthlyCost { get; set; }
         public System.DateTime StartDate { get; set; }
@@ -12,6 +13,14 @@ namespace CapitalControl.Models
         public bool IsActive { get; set; }
         public decimal Cost { get; set; }
         public int BillingDay { get; set; }
-        public void RaiseAll() { }
+
+        // Recalcula los textos que se muestran en la tabla
+        public void RaiseAll()
+        {
+            MonthlyCost = Cost;
+            CostLabel = Fmt.Money(Cost) + "/mes";
+            BillingLabel = "Día " + BillingDay + " de cada mes";
+            StatusLabel = IsActive ? "Activa" : "Cancelada";
+        }
     }
 }

@@ -48,6 +48,13 @@ namespace CapitalControl
 
             this.Load += HistoryForm_Load;
             this.Resize += HistoryForm_Resize;
+            // Recargar el historial cada vez que se muestra (los datos llegan después del login)
+            this.VisibleChanged += (s, e) =>
+            {
+                if (!Visible) return;
+                BuildFilters();
+                ApplyFilters();
+            };
 
             WireEvents();
             BuildFilters();
@@ -387,7 +394,7 @@ namespace CapitalControl
                 bool matchesSearch = string.IsNullOrEmpty(search)
                                      || t.Description.ToLowerInvariant().Contains(search)
                                      || t.Category.ToLowerInvariant().Contains(search);
-                bool matchesType = type == "Todos los tipos" || t.Type.ToString() == type;
+                bool matchesType = type == "Todos los tipos" || t.TypeLabel == type;
                 bool matchesCategory = category == "Todas las categorias" || t.Category == category;
                 return matchesSearch && matchesType && matchesCategory;
             })

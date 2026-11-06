@@ -228,8 +228,17 @@ namespace CapitalControl
 
             if (!valid) return;
 
+            string error = Conexion.RegistrarUsuario(name, email, password);
+            if (error != "")
+            {
+                Show(lblEmailError, error);
+                return;
+            }
+
             AppData.UserName = name;
             AppData.UserEmail = email;
+            AppData.UserId = BaseDatos.ObtenerIdUsuario(email);
+            if (!BaseDatos.CargarDatosUsuario()) return;
 
             btnRegister.Enabled = false;
             btnRegister.Text = "Creando cuenta...";

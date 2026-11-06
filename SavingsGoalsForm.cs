@@ -45,6 +45,8 @@ namespace CapitalControl
 
             this.Load += SavingsGoalsForm_Load;
             this.Resize += SavingsGoalsForm_Resize;
+            // Recargar la tabla cada vez que se muestra (los datos llegan después del login)
+            this.VisibleChanged += (s, e) => { if (Visible) Refresh(); };
 
             WireEvents();
             Refresh();
@@ -381,7 +383,7 @@ namespace CapitalControl
                 dlg.Text = "Nueva Meta";
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
-                AppData.Goals.Insert(0, new SavingsGoal
+                BaseDatos.InsertarMeta(new SavingsGoal
                 {
                     Name = dlg.GoalName,
                     Category = dlg.GoalCategory,
@@ -408,7 +410,7 @@ namespace CapitalControl
                 g.Current = Math.Min(dlg.GoalTarget, dlg.GoalCurrent);
                 g.TargetDate = dlg.GoalTargetDate.ToString("yyyy-MM-dd");
                 g.ColorKey = dlg.GoalColorKey;
-                g.RaiseAll();
+                BaseDatos.ActualizarMeta(g);
 
                 Refresh();
             }
@@ -422,9 +424,9 @@ namespace CapitalControl
 
                 decimal amount = dlg.ContributionAmount;
                 g.Current = Math.Min(g.Target, g.Current + amount);
-                g.RaiseAll();
+                if (!BaseDatos.ActualizarMeta(g)) return;
 
-                AppData.Transactions.Insert(0, new Transaction
+                BaseDatos.InsertarTransaccion(new Transaction
                 {
                     Date = DateTime.Today,
                     Type = TxType.Gasto,
@@ -448,7 +450,7 @@ namespace CapitalControl
 
             if (r != DialogResult.Yes) return;
 
-            AppData.Goals.Remove(g);
+            BaseDatos.EliminarMeta(g);
             Refresh();
         }
 

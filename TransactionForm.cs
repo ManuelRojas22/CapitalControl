@@ -58,6 +58,13 @@ namespace CapitalControl
 
             this.Load += TransactionForm_Load;
             this.Resize += TransactionForm_Resize;
+            // Recargar categorías y saldo cada vez que se muestra (llegan después del login)
+            this.VisibleChanged += (s, e) =>
+            {
+                if (!Visible) return;
+                LoadCategories();
+                UpdateBalanceWarning();
+            };
 
             WireEvents();
             ResetForm();
@@ -535,7 +542,7 @@ namespace CapitalControl
 
             TryParseMoney(txtAmount.Text, out amount);
 
-            AppData.Transactions.Insert(0, new Transaction
+            bool guardado = BaseDatos.InsertarTransaccion(new Transaction
             {
                 Date = date,
                 Type = _type,
@@ -543,6 +550,7 @@ namespace CapitalControl
                 Description = txtDescription.Text.Trim(),
                 Amount = amount
             });
+            if (!guardado) return;
 
             pnlSuccessBox.Visible = true;
             ResetForm();
