@@ -17,6 +17,7 @@ namespace CapitalControl
         public event EventHandler<string> NavigateRequested;
 
         private bool _layoutReady = false;
+        private Button btnAccesoTop;
         private const int LayoutMargin = 24;
         private const int ColGap = 20;
         private const int DesktopBreak = 1300;
@@ -38,6 +39,19 @@ namespace CapitalControl
 
             this.Load += MainForm_Load;
             this.Resize += MainForm_Resize;
+
+            btnAccesoTop = new Button
+            {
+                Text = "Área admin",
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.Transparent,
+                ForeColor = Color.FromArgb(46, 204, 113),
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnAccesoTop.FlatAppearance.BorderSize = 0;
+            btnAccesoTop.Click += (s, e) => Raise("acceso");
+            pnlHeader.Controls.Add(btnAccesoTop);
 
             WireEvents();
         }
@@ -118,6 +132,12 @@ namespace CapitalControl
             lblLogo.Top = (pnlHeader.Height - lblLogo.Height) / 2;
 
             int btnRight = w - LayoutMargin;
+            btnAccesoTop.Width = 110;
+            btnAccesoTop.Height = 40;
+            btnAccesoTop.Left = btnRight - btnAccesoTop.Width;
+            btnAccesoTop.Top = (pnlHeader.Height - btnAccesoTop.Height) / 2;
+            btnRight = btnAccesoTop.Left - 12;
+
             btnRegisterTop.Width = 150;
             btnRegisterTop.Height = 40;
             btnRegisterTop.Left = btnRight - btnRegisterTop.Width;

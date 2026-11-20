@@ -20,12 +20,16 @@ namespace CapitalControl
             MembershipsForm membershipsForm = new MembershipsForm();
             DebtsCreditsForm debtsCreditsForm = new DebtsCreditsForm();
             SavingsGoalsForm savingsGoalsForm = new SavingsGoalsForm();
+            AccesoForm accesoForm = new AccesoForm();
+            MenuPForm menuForm = new MenuPForm();
+            UsuariosForm usuariosForm = new UsuariosForm();
 
             EventHandler<string> navigate = null;
             navigate = (sender, target) => Navigate(target,
                 mainForm, loginForm, registerForm,
                 dashboardForm, transactionForm, historyForm,
-                membershipsForm, debtsCreditsForm, savingsGoalsForm);
+                membershipsForm, debtsCreditsForm, savingsGoalsForm,
+                accesoForm, menuForm, usuariosForm);
 
             mainForm.NavigateRequested += navigate;
             loginForm.NavigateRequested += navigate;
@@ -36,6 +40,8 @@ namespace CapitalControl
             membershipsForm.NavigateRequested += navigate;
             debtsCreditsForm.NavigateRequested += navigate;
             savingsGoalsForm.NavigateRequested += navigate;
+            accesoForm.NavigateRequested += navigate;
+            menuForm.NavigateRequested += navigate;
 
             // Prevent closing the app when Login/Register are closed with the X button.
             FormClosingEventHandler hideAndShowMain = (s, e) =>
@@ -49,6 +55,15 @@ namespace CapitalControl
             };
             loginForm.FormClosing += hideAndShowMain;
             registerForm.FormClosing += hideAndShowMain;
+            accesoForm.FormClosing += hideAndShowMain;
+            usuariosForm.FormClosing += (s, e) =>
+            {
+                if (e.CloseReason == CloseReason.UserClosing)
+                {
+                    e.Cancel = true;
+                    navigate(usuariosForm, "menu");
+                }
+            };
 
             // Start with the landing (MainForm)
             Application.Run(mainForm);
@@ -63,7 +78,10 @@ namespace CapitalControl
             HistoryForm historyForm,
             MembershipsForm membershipsForm,
             DebtsCreditsForm debtsCreditsForm,
-            SavingsGoalsForm savingsGoalsForm)
+            SavingsGoalsForm savingsGoalsForm,
+            AccesoForm accesoForm,
+            MenuPForm menuForm,
+            UsuariosForm usuariosForm)
         {
             // Hide all forms first
             mainForm.Hide();
@@ -75,6 +93,9 @@ namespace CapitalControl
             membershipsForm.Hide();
             debtsCreditsForm.Hide();
             savingsGoalsForm.Hide();
+            accesoForm.Hide();
+            menuForm.Hide();
+            usuariosForm.Hide();
 
             switch (target)
             {
@@ -102,6 +123,15 @@ namespace CapitalControl
                     break;
                 case "goals":
                     savingsGoalsForm.Show();
+                    break;
+                case "acceso":
+                    accesoForm.Show();
+                    break;
+                case "menu":
+                    menuForm.Show();
+                    break;
+                case "usuarios":
+                    usuariosForm.Show();
                     break;
                 case "landing":
                 case "main":

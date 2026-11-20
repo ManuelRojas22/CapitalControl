@@ -1,66 +1,74 @@
 # CapitalControl - Base de Datos
 
-Esquema SQL para la parte de **registro y login de usuarios** del sistema CapitalControl.
+Esquema de **Microsoft SQL Server** para CapitalControl: autenticación de usuarios y datos financieros.
 
 ## Archivos
 
 | Archivo | Descripción |
 |---------|-------------|
-| `capitalcontrol.sql` | Script SQL con todas las tablas y datos de ejemplo |
+| `capitalcontrol.sql` | Base de datos, tablas de autenticación y datos de ejemplo |
+| `capitalcontrol_datos_sqlserver.sql` | Tablas financieras y catálogo de categorías |
 
 ## Requisitos
 
-- MySQL 5.7+ o MariaDB 10.2+
-- Codificación `utf8mb4`
+- Microsoft SQL Server 2019+ o SQL Server Express
+- Autenticación de Windows (`Integrated Security=True`) o permisos equivalentes
+- `sqlcmd` (incluido con SQL Server / herramientas de cliente)
 
 ## Instalación
 
-Ejecuta el script en tu servidor de base de datos:
+Ejecuta los scripts **en este orden**:
 
-```bash
-mysql -u tu_usuario -p < database/capitalcontrol.sql
+```powershell
+sqlcmd -S . -E -i database\capitalcontrol.sql
+sqlcmd -S . -E -i database\capitalcontrol_datos_sqlserver.sql
 ```
 
-O desde la consola de MySQL:
+Para SQL Server Express:
 
-```sql
-SOURCE database/capitalcontrol.sql;
+```powershell
+sqlcmd -S .\SQLEXPRESS -E -i database\capitalcontrol.sql
+sqlcmd -S .\SQLEXPRESS -E -i database\capitalcontrol_datos_sqlserver.sql
 ```
 
-Esto creará la base de datos `capitalcontrol` y todas sus tablas.
+También puedes abrirlos en SQL Server Management Studio (SSMS) y presionar **F5**.
 
 ## Tablas incluidas
 
-| Tabla | Propósito |
-|-------|-----------|
-| `roles` | Roles de usuario (admin, cliente, etc.) |
-| `usuarios` | Cuentas de usuario, email único, hash de contraseña, estado, verificación de email, intentos fallidos y bloqueo por fuerza bruta |
-| `sesiones` | Sesiones activas / refresh tokens con fecha de expiración |
-| `tokens_reset` | Tokens para recuperación/restablecimiento de contraseña |
-| `intentos_login` | Auditoría de cada intento de login (exitoso o fallido) |
+| Script | Tabla | Propósito |
+|--------|-------|-----------|
+| `capitalcontrol.sql` | `roles` | Roles de usuario (admin, cliente) |
+| `capitalcontrol.sql` | `usuarios` | Cuentas: email único, hash BCrypt, estado, verificación, intentos fallidos y bloqueo |
+| `capitalcontrol.sql` | `sesiones` | Sesiones activas / refresh tokens con expiración |
+| `capitalcontrol.sql` | `tokens_reset` | Tokens para recuperación de contraseña |
+| `capitalcontrol.sql` | `intentos_login` | Auditoría de cada intento de login y su motivo |
+| `datos_sqlserver.sql` | `categorias` | Catálogo compartido de ingresos, gastos e inversiones |
+| `datos_sqlserver.sql` | `transacciones` | Ingresos, gastos e inversiones por usuario |
+| `datos_sqlserver.sql` | `deudas` | Deudas y créditos con tasa de interés |
+| `datos_sqlserver.sql` | `metas_ahorro` | Metas de ahorro con progreso y color |
+| `datos_sqlserver.sql` | `membresias` | Suscripciones con día de facturación y estado |
 
 ## Usuario de ejemplo
 
-El script inserta un usuario de prueba:
-
 - **Email:** `demo@capitalcontrol.com`
-- **Contraseña:** `CapitalControl123` (el hash ya está incluido en el script)
+- **Contraseña:** `CapitalControl123`
+- **Hash BCrypt:** incluido en el script (`$2a$11$...`)
 
-> **Importante:** En producción nunca guardes contraseñas en texto plano. El campo `password_hash` debe almacenar el hash generado por tu aplicación (bcrypt, argon2, etc.).
+> En producción nunca guardes contraseñas en texto plano. El campo `password_hash` se genera con `BCrypt.Net.BCrypt.HashPassword` en la aplicación.
 
-## Flujo recomendado
+## Flujo de autenticación
 
-1. **Registro:** Insertar en `usuarios` con el hash de la contraseña generado en el backend.
-2. **Login:** Consultar el usuario por email en `usuarios`, verificar el hash de la contraseña en el backend y, si es correcto, crear una sesión en `sesiones`.
-3. **Recuperación de contraseña:** Generar un token en `tokens_reset`, enviarlo por email y permitir el restablecimiento validando que no esté usado ni expirado.
-4. **Seguridad:** Registrar intentos en `intentos_login` y bloquear la cuenta temporalmente tras varios fallos usando el campo `bloqueado_hasta` en `usuarios`.
+1. **Registro:** `Conexion.RegistrarUsuario` inserta en `usuarios` con hash BCrypt, rol cliente, estado `activo` y correo verificado.
+2. **Login:** `Conexion.ValidarUsuario` busca por email, verifica el hash con BCrypt, actualiza `ultimo_acceso` y escribe en `intentos_login` dentro de una transacción.
+3. **Bloqueo:** al tercer intento fallido se fija `bloqueado_hasta` en 15 minutos y el estado pasa a `bloqueado`.
+4. **Carga de datos:** `BaseDatos.CargarDatosUsuario()` llena `AppData` desde las tablas financieras filtrando por `usuario_id`.
 
 ## Notas
 
-- El email es único (`uk_usuarios_email`).
-- Cada usuario tiene un UUID público (`uk_usuarios_uuid`).
-- Las relaciones usan claves foráneas con `ON DELETE CASCADE` y `ON UPDATE CASCADE`.
-- No incluye procedimientos almacenados, solo tablas y datos de ejemplo.
+- El email es único (`uk_usuarios_email`) y cada usuario tiene un UUID público (`uk_usuarios_uuid`).
+- Las relaciones usan claves foráneas con `ON DELETE CASCADE`.
+- `uuid`, `fecha_creacion` y `fecha_actualizacion` tienen valores por defecto.
+- Los scripts eliminan y recrean tablas: **no los ejecutes sobre datos que quieras conservar**.
 
 ## Licencia
 

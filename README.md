@@ -5,11 +5,8 @@ Aplicación de escritorio para Windows que te ayuda a controlar tus finanzas per
 ![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)
 ![C#](https://img.shields.io/badge/lenguaje-C%23-239120?logo=csharp)
 ![Windows Forms](https://img.shields.io/badge/UI-Windows%20Forms-0078D4)
-![Plataforma](https://img.shields.io/badge/plataforma-Windows-lightgrey)
+![SQL Server](https://img.shields.io/badge/DB-SQL%20Server-CC2927?logo=microsoftsqlserver)
 ![Estado](https://img.shields.io/badge/estado-en%20desarrollo-yellow)
-
-<!-- TODO: agrega capturas en docs/screenshots/ -->
-<!-- ![Dashboard](docs/screenshots/dashboard.png) -->
 
 ## Tabla de contenidos
 
@@ -32,26 +29,29 @@ Aplicación de escritorio para Windows que te ayuda a controlar tus finanzas per
 
 ## Características
 
-- Registro e inicio de sesión de usuarios.
+- Registro e inicio de sesión de usuarios con contraseñas hasheadas con BCrypt.
+- Bloqueo temporal y auditoría de intentos fallidos de inicio de sesión.
 - Dashboard con el resumen de tu situación financiera.
-- Registro de ingresos y gastos.
+- Registro de ingresos, gastos e inversiones.
 - Gestión de deudas y créditos: crear, editar y pagar.
 - Metas de ahorro con aportes progresivos.
 - Control de membresías y suscripciones.
 - Historial completo de movimientos.
-- Datos persistentes en base de datos SQL.
+- Datos persistentes en SQL Server.
 
 ## Módulos
 
 | Módulo | Formularios | Qué permite hacer |
 |--------|-------------|-------------------|
-| Autenticación | `LoginForm`, `RegisterForm` | Crear una cuenta e iniciar sesión |
+| Autenticación | `LoginForm`, `RegisterForm`, `AccesoForm` | Crear una cuenta e iniciar sesión |
+| Menú | `MenuPForm` | Acceder a todos los módulos desde un único lugar |
 | Panel principal | `MainForm`, `DashboardForm` | Navegar por la app y ver el resumen financiero |
-| Transacciones | `TransactionForm` | Registrar ingresos y gastos |
+| Transacciones | `TransactionForm` | Registrar ingresos, gastos e inversiones |
 | Deudas y créditos | `DebtsCreditsForm`, `DebtEditForm`, `PayDebtForm` | Listar, editar y pagar deudas |
 | Metas de ahorro | `SavingsGoalsForm`, `GoalEditForm`, `ContributeGoalForm` | Crear metas y aportar a ellas |
 | Membresías | `MembershipsForm`, `MembershipEditForm` | Administrar suscripciones |
 | Historial | `HistoryForm` | Consultar movimientos pasados |
+| Usuarios | `UsuariosForm` | Crear, editar, cambiar rol/estado y eliminar usuarios |
 
 ## Tecnologías
 
@@ -60,7 +60,9 @@ Aplicación de escritorio para Windows que te ayuda a controlar tus finanzas per
 | Lenguaje | C# |
 | Framework | .NET 8 (`net8.0-windows`) |
 | Interfaz | Windows Forms |
-| Base de datos | MySQL / MariaDB <!-- TODO: confirma el motor en Conexion.cs --> |
+| Base de datos | Microsoft SQL Server (Express, 2019 o superior) |
+| Proveedor ADO.NET | `Microsoft.Data.SqlClient` 7.1.1 |
+| Hash de contraseñas | `BCrypt.Net-Next` 4.2.0 |
 | IDE recomendado | Visual Studio 2022 |
 
 ## Requisitos
@@ -68,7 +70,7 @@ Aplicación de escritorio para Windows que te ayuda a controlar tus finanzas per
 - Windows 10 u 11
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - Visual Studio 2022 (17.8 o superior) con la carga de trabajo **Desarrollo de escritorio de .NET**
-- MySQL 5.7+ o MariaDB 10.2+
+- SQL Server 2019+ / SQL Server Express (instancia local `.` o `.\SQLEXPRESS`)
 - Git
 
 ## Instalación
@@ -80,11 +82,14 @@ Aplicación de escritorio para Windows que te ayuda a controlar tus finanzas per
    cd CapitalControl
    ```
 
-2. Crea la base de datos importando el esquema:
+2. Crea la base de datos y las tablas ejecutando los dos scripts en orden:
 
-   ```bash
-   mysql -u tu_usuario -p < database/capitalcontrol.sql
+   ```powershell
+   sqlcmd -S . -E -i database\capitalcontrol.sql
+   sqlcmd -S . -E -i database\capitalcontrol_datos_sqlserver.sql
    ```
+
+   Si usas SQL Server Express, cambia `-S .` por `-S .\SQLEXPRESS`.
 
 3. Configura la conexión (ver [Configuración](#configuración)).
 
@@ -96,123 +101,117 @@ Aplicación de escritorio para Windows que te ayuda a controlar tus finanzas per
    dotnet run
    ```
 
-   También puedes abrir `CapitalControl.slnx` en Visual Studio y presionar **F5**.
+   También puedes abrir el proyecto en Visual Studio y presionar **F5**.
 
 ## Configuración
 
-La conexión a la base de datos se define en `Conexion.cs`. Ajusta estos valores:
+La conexión se define en `Conexion.cs` (`Conexion.CadenaConexion`):
 
-| Parámetro | Ejemplo |
-|-----------|---------|
-| Servidor | `localhost` |
-| Puerto | `3306` |
-| Base de datos | `capitalcontrol` |
-| Usuario | `tu_usuario` |
-| Contraseña | `tu_contraseña` |
+| Parámetro | Valor por defecto |
+|-----------|-------------------|
+| Servidor | `.` (instancia local; usar `.\SQLEXPRESS` si aplica) |
+| Base de datos | `CapitalControl` |
+| Autenticación | `Integrated Security=True` (Windows Auth) |
+| Certificado | `TrustServerCertificate=True` |
 
-> **Recomendación:** no subas credenciales reales al repositorio. Usa variables de entorno o un archivo de configuración local excluido con `.gitignore`.
+> **Recomendación:** no subas credenciales reales al repositorio. Si cambias a autenticación de SQL Server, usa variables de entorno o un archivo local excluido con `.gitignore`.
 
 ## Uso
 
-1. Abre la aplicación y crea una cuenta desde **Registro**.
-2. Inicia sesión con tu correo y contraseña.
-3. Desde el **Dashboard** revisa tu resumen financiero.
+1. Abre la aplicación. En la portada puedes entrar por **Iniciar sesión** o por **Área admin** (flujo `AccesoForm` → `MenuPForm`).
+2. Inicia sesión con `demo@capitalcontrol.com` / `CapitalControl123`, o crea una cuenta desde **Registro**.
+3. Desde el **Menú** o el **Dashboard** revisa tu resumen financiero.
 4. Registra tus ingresos y gastos en **Transacciones**.
 5. Agrega tus deudas en **Deudas y créditos** y regístralas como pagadas cuando corresponda.
 6. Crea **Metas de ahorro** y aporta a ellas con el tiempo.
 7. Registra tus **Membresías** para no olvidar pagos recurrentes.
 8. Consulta el **Historial** para ver todos tus movimientos.
+9. En **Usuarios** puedes crear cuentas, asignar roles y cambiar estados.
 
 ## Arquitectura
-
-El proyecto separa la interfaz, la lógica y los datos:
 
 ```
 ┌──────────────────────┐
 │  Formularios (UI)    │  *.cs / *.Designer.cs / Controls/
 └──────────┬───────────┘
-           │
+           │  eventos NavigateRequested ("login", "app", "menu", ...)
 ┌──────────▼───────────┐
 │  Services            │  Lógica de negocio y acceso a datos
 └──────────┬───────────┘
            │
-┌──────────▼───────────┐     ┌──────────────────┐
-│  Models              │     │  Base de datos   │
-│  Entidades           │◄───►│  (Conexion.cs)   │
-└──────────────────────┘     └──────────────────┘
+┌──────────▼───────────┐     ┌──────────────────────┐
+│  Models              │◄───►│  SQL Server (dbo.*)  │
+│  Entidades           │     │  Conexion / BaseDatos│
+└──────────────────────┘     └──────────────────────┘
 ```
+
+`Program.cs` centraliza la navegación: todos los formularios exponen `NavigateRequested` y ese controlador oculta/muestra la vista destino.
 
 ## Estructura del proyecto
 
 ```
 CapitalControl/
-├── database/              # Esquema SQL
-├── Models/                # Entidades del dominio
-├── Services/              # Lógica de negocio y acceso a datos
-├── Controls/              # Controles personalizados de la interfaz
-├── Conexion.cs            # Conexión a la base de datos
-├── Complementos.cs        # Utilidades y helpers
-├── Fmt.cs                 # Formato de montos y fechas
-├── Program.cs             # Punto de entrada
-├── App.xaml.cs
-├── LoginForm.cs           # Inicio de sesión
-├── RegisterForm.cs        # Registro
-├── MainForm.cs            # Ventana principal
-├── DashboardForm.cs       # Resumen financiero
-├── TransactionForm.cs     # Ingresos y gastos
-├── DebtsCreditsForm.cs    # Deudas y créditos
-├── DebtEditForm.cs
-├── PayDebtForm.cs
-├── SavingsGoalsForm.cs    # Metas de ahorro
-├── GoalEditForm.cs
-├── ContributeGoalForm.cs
-├── MembershipsForm.cs     # Membresías
-├── MembershipEditForm.cs
-├── HistoryForm.cs         # Historial
+├── database/                       # Scripts SQL Server
+│   ├── capitalcontrol.sql          #roles, usuarios, sesiones, tokens e intentos
+│   └── capitalcontrol_datos_sqlserver.sql  #categorías y datos financieros
+├── Models/                         # Entidades del dominio
+├── Services/                       # Lógica de negocio y acceso a datos
+│   ├── AppData.cs
+│   └── BaseDatos.cs
+├── Controls/                       # Controles personalizados de la interfaz
+├── Conexion.cs                     # Conexión, registro, login y auditoría
+├── Complementos.cs                 # Utilidades y helpers
+├── Fmt.cs                          # Formato de montos y fechas
+├── Program.cs                      # Punto de entrada y navegación
+├── MainForm.cs                     # Portada / landing
+├── LoginForm.cs                    # Inicio de sesión
+├── RegisterForm.cs                 # Registro
+├── AccesoForm.cs                   # Acceso alternativo
+├── MenuPForm.cs                    # Menú
+├── UsuariosForm.cs                 # ABM de usuarios
+├── DashboardForm.cs                # Resumen financiero
+├── TransactionForm.cs              # Ingresos, gastos e inversiones
+├── DebtsCreditsForm.cs             # Deudas y créditos
+├── SavingsGoalsForm.cs             # Metas de ahorro
+├── MembershipsForm.cs              # Membresías
+├── HistoryForm.cs                  # Historial
 └── CapitalControl.csproj
 ```
 
 ## Base de datos
 
-El esquema está en [`database/capitalcontrol.sql`](database/capitalcontrol.sql). Las tablas de autenticación son:
+| Script | Tablas |
+|--------|--------|
+| `database/capitalcontrol.sql` | `roles`, `usuarios`, `sesiones`, `tokens_reset`, `intentos_login` |
+| `database/capitalcontrol_datos_sqlserver.sql` | `categorias`, `transacciones`, `deudas`, `metas_ahorro`, `membresias` |
 
-| Tabla | Propósito |
-|-------|-----------|
-| `roles` | Roles de usuario |
-| `usuarios` | Cuentas: email único, hash de contraseña, estado y verificación de email |
-| `sesiones` | Sesiones activas / refresh tokens con expiración |
-| `tokens_reset` | Recuperación de contraseña |
-| `intentos_login` | Auditoría de intentos de inicio de sesión |
+Usuario de ejemplo: `demo@capitalcontrol.com` / `CapitalControl123` (el hash BCrypt ya está en el script).
 
-<!-- TODO: documenta aquí las tablas de transacciones, deudas, metas y membresías, y agrega un diagrama ER en docs/ -->
-
-Para reinstalar desde cero:
-
-```bash
-mysql -u tu_usuario -p -e "DROP DATABASE IF EXISTS capitalcontrol;"
-mysql -u tu_usuario -p < database/capitalcontrol.sql
-```
+Para reinstalar desde cero, vuelve a ejecutar los dos scripts; el primero elimina las tablas de autenticación y el segundo elimina las tablas financieras.
 
 > Esto elimina todos los datos existentes.
 
 ## Seguridad
 
-- Las contraseñas se almacenan como hash (bcrypt o argon2), nunca en texto plano.
-- El correo de cada usuario es único.
-- Los intentos de inicio de sesión quedan registrados para auditoría.
+- Las contraseñas se almacenan como hash BCrypt, nunca en texto plano.
+- Todas las consultas usan parámetros (`@email`, `@hash`, etc.), evitando inyección SQL.
+- El correo es único (`uk_usuarios_email`).
+- Cada fallo de login se registra en `intentos_login` con motivo (`usuario_inexistente`, `contrasena_incorrecta`, `bloqueado`).
+- Después de 3 intentos fallidos, la cuenta queda bloqueada 15 minutos (`intentos_fallidos`, `bloqueado_hasta`).
+- Los inicios de sesión correctos actualizan `ultimo_acceso` y reinician el contador.
 - Las sesiones y los tokens de recuperación tienen fecha de expiración.
-- Usa consultas parametrizadas en todo acceso a datos para evitar inyección SQL.
 - No subas credenciales ni cadenas de conexión reales al repositorio.
 
 ## Solución de problemas
 
 | Problema | Posible causa | Solución |
 |----------|---------------|----------|
-| No conecta a la base de datos | Servidor apagado o credenciales incorrectas | Verifica que MySQL/MariaDB esté activo y revisa `Conexion.cs` |
-| `Unknown database 'capitalcontrol'` | No se importó el esquema | Ejecuta `mysql -u tu_usuario -p < database/capitalcontrol.sql` |
-| Error al compilar por el SDK | Falta .NET 8 | Instala el [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) y revisa con `dotnet --version` |
+| No conecta a la base de datos | Servicio detenido o instancia distinta | Verifica SQL Server en `services.msc` y ajusta `Data Source` en `Conexion.cs` |
+| `Login failed for user` | Autenticación de Windows sin permisos | Crea el usuario en SQL Server o usa `Integrated Security=True` |
+| `Cannot open database "CapitalControl"` | No se ejecutaron los scripts | Ejecuta los dos scripts de `database/` con `sqlcmd` |
+| Error de compilación por el SDK | Falta .NET 8 | Instala el SDK y revisa con `dotnet --version` |
 | El diseñador de formularios no abre | Falta la carga de trabajo de escritorio | Instálala desde el instalador de Visual Studio |
-| `Access denied for user` | Usuario sin permisos | Concede permisos sobre la base de datos al usuario configurado |
+| La cuenta se bloquea al probar | 3 intentos fallidos acumulados | Espera 15 min o limpia `intentos_fallidos`/`bloqueado_hasta` en SQL Server |
 
 ## Preguntas frecuentes
 
@@ -220,13 +219,19 @@ mysql -u tu_usuario -p < database/capitalcontrol.sql
 No. Usa Windows Forms (`net8.0-windows`), así que requiere Windows.
 
 **¿Mis datos se envían a internet?**
-No. Todo se guarda en la base de datos que tú configuras.
+No. Todo se guarda en la base de datos local que tú configuras.
 
 **¿Puedo usar otro motor de base de datos?**
-Es posible, pero tendrías que adaptar `Conexion.cs`, el proveedor de datos y el esquema SQL.
+Es posible, pero tendrías que adaptar `Conexion.cs`, `BaseDatos.cs`, el proveedor NuGet y los scripts SQL.
+
+**¿Qué diferencia hay entre `LoginForm` y `AccesoForm`?**
+Ambos validan con el mismo servicio (`Conexion.ValidarUsuario`). `LoginForm` es la vista de la portada; `AccesoForm` es el flujo heredado que después abre `MenuPForm`.
 
 ## Hoja de ruta
 
+- [x] Unificar el esquema a SQL Server
+- [x] Parametrizar el acceso a datos y auditar intentos de login
+- [x] Integrar los formularios de acceso, menú y usuarios
 - [ ] Mover la cadena de conexión fuera del código
 - [ ] Reportes y gráficos por período
 - [ ] Exportar datos a CSV / Excel
@@ -248,4 +253,4 @@ Para cambios grandes, abre primero un issue para discutirlos. Se sugiere usar el
 
 ## Licencia
 
-Uso interno del proyecto CapitalControl. <!-- TODO: añade una licencia (MIT, etc.) si el repositorio es público -->
+Uso interno del proyecto CapitalControl.

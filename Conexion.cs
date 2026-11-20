@@ -1,66 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Data;
 using Microsoft.Data.SqlClient;
-using System.Windows.Forms;
-using System.Threading.Tasks;
-using System.Drawing;
 
 namespace CapitalControl
 {
     class Conexion
     {
         public static string CadenaConexion =>
-            "Data Source=.;Initial Catalog=" + VarGlobal.xNomDB +
+            "Data Source=.;Initial Catalog=CapitalControl" +
             ";Integrated Security=True;TrustServerCertificate=True";
 
-        SqlConnection Conn = new SqlConnection(CadenaConexion);
-        //SqlConnection Conn = new SqlConnection("Data Source=.\\MSSQLSERVER01;Initial Catalog=" + Conexion.VarGlobal.xNomDB + ";Integrated Security=True");
-        //SqlConnection Conn = new SqlConnection("Data Source=ZAFARI\\MSSQLSERVER01;Initial Catalog=" + Conexion.VarGlobal.xNomDB + ";Integrated Security=True"); //Define Cadena de Conex conn
-        //SqlConnection Conn = new SqlConnection("Data Source=.\\SQLEXPRESS;Initial Catalog=Proyecto;Integrated Security=True"); //Define Cadena de Conex conn
-        private SqlCommandBuilder Cmb;
-        public DataSet Ds = new DataSet();
-        public SqlDataAdapter Da;
-
-        public DataSet DsNC = new DataSet();
-        public SqlDataAdapter DaNC;
-        private SqlCommandBuilder CmbNC;
-
-        public SqlCommand Comando;
-        public static class VarGlobal
-        {
-            public static string xNomDB = "CapitalControl";
-            public static int xColFrm = 0;
-            public static int xEstIni = 0;
-            public static int TiketNfac = 0; 
-            public static string xNomU = "";
-            public static string xNomC = "";
-            public static string xTipoU = "";
-            public static int xswCNF = 0;
-            public static Color xColorFondo = Color.White;
-            public static byte[] xFoto; // (byte[])fila["Foto"];
-            public static byte[] xLogo;
-            public static byte[] xFondo;
-
-            public static int CenterFrm = 0;
-        }
-        public bool Conectar()
-        {
-            try { Conn.Open();  return true;  }
-            catch (Exception ex) { MessageBox.Show("Error al Conectar Base de Datos por " + ex.ToString());  return false; }
-            finally  { Conn.Close(); }
-        }
-
-        // Registra un usuario nuevo. Devuelve "" si todo salió bien, o el mensaje de error.
         public static string RegistrarUsuario(string nombre, string email, string password)
         {
             try
             {
                 using (var cn = new SqlConnection(CadenaConexion))
                 using (var cmd = new SqlCommand(
-                    "INSERT INTO dbo.usuarios (nombres, email, password_hash) VALUES (@nombre, @email, @hash)", cn))
+                    "INSERT INTO dbo.usuarios (nombres, email, password_hash, rol_id, estado, email_verificado) " +
+                    "VALUES (@nombre, @email, @hash, 2, 'activo', 1)", cn))
                 {
                     cmd.Parameters.AddWithValue("@nombre", nombre);
                     cmd.Parameters.AddWithValue("@email", email);
@@ -80,103 +36,98 @@ namespace CapitalControl
             }
         }
 
-        // Valida el login. Devuelve el nombre del usuario si es correcto, o null si no.
         public static string ValidarUsuario(string email, string password)
         {
             using (var cn = new SqlConnection(CadenaConexion))
-            using (var cmd = new SqlCommand(
-                "SELECT nombres, password_hash FROM dbo.usuarios WHERE email = @email AND estado = 'activo'", cn))
             {
-                cmd.Parameters.AddWithValue("@email", email);
                 cn.Open();
-                using (var dr = cmd.ExecuteReader())
+                using (var tx = cn.BeginTransaction())
                 {
-                    if (!dr.Read()) return null;
-                    string nombre = dr.GetString(0);
-                    string hash = dr.GetString(1);
-                    return BCrypt.Net.BCrypt.Verify(password, hash) ? nombre : null;
+                    int id;
+                    int intentos;
+                    string nombre;
+                    string hash;
+                    string estado;
+                    DateTime? bloqueadoHasta;
+
+                    using (var cmd = new SqlCommand(
+                        "SELECT id, nombres, password_hash, estado, intentos_fallidos, bloqueado_hasta " +
+                        "FROM dbo.usuarios WHERE email = @email", cn, tx))
+                    {
+                        cmd.Parameters.AddWithValue("@email", email);
+                        using (var dr = cmd.ExecuteReader())
+                        {
+                            if (!dr.Read())
+                            {
+                                RegistrarIntento(cn, tx, email, false, "usuario_inexistente");
+                                tx.Commit();
+                                return null;
+                            }
+
+                            id = dr.GetInt32(0);
+                            nombre = dr.GetString(1);
+                            hash = dr.GetString(2);
+                            estado = dr.GetString(3);
+                            intentos = dr.GetInt32(4);
+                            bloqueadoHasta = dr.IsDBNull(5) ? (DateTime?)null : dr.GetDateTime(5);
+                        }
+                    }
+
+                    if (estado != "activo" || (bloqueadoHasta.HasValue && bloqueadoHasta.Value > DateTime.Now))
+                    {
+                        RegistrarIntento(cn, tx, email, false, "bloqueado");
+                        tx.Commit();
+                        return null;
+                    }
+
+                    if (!BCrypt.Net.BCrypt.Verify(password, hash))
+                    {
+                        int nuevosIntentos = intentos + 1;
+                        DateTime? hasta = nuevosIntentos >= 3 ? DateTime.Now.AddMinutes(15) : (DateTime?)null;
+
+                        using (var cmd = new SqlCommand(
+                            "UPDATE dbo.usuarios SET intentos_fallidos = @intentos, bloqueado_hasta = @hasta, " +
+                            "estado = CASE WHEN @hasta IS NOT NULL THEN 'bloqueado' ELSE estado END " +
+                            "WHERE id = @id", cn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@intentos", nuevosIntentos);
+                            cmd.Parameters.AddWithValue("@hasta", (object)hasta ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@id", id);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        RegistrarIntento(cn, tx, email, false, "contrasena_incorrecta");
+                        tx.Commit();
+                        return null;
+                    }
+
+                    using (var cmd = new SqlCommand(
+                        "UPDATE dbo.usuarios SET intentos_fallidos = 0, bloqueado_hasta = NULL, " +
+                        "ultimo_acceso = SYSDATETIME() WHERE id = @id", cn, tx))
+                    {
+                        cmd.Parameters.AddWithValue("@id", id);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    RegistrarIntento(cn, tx, email, true, null);
+                    tx.Commit();
+                    return nombre;
                 }
             }
         }
 
-        public bool ExisteT(string tabla)
+        private static void RegistrarIntento(SqlConnection cn, SqlTransaction tx,
+            string email, bool exitoso, string razon)
         {
-            Conn.Open();
-            string ConsultaObj = @"SELECT Count(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '" + tabla + "'";
-            Comando = new SqlCommand(ConsultaObj, Conn);
-            int i = Convert.ToInt32(Comando.ExecuteScalar());
-            Conn.Close();
-            if (i > 0) { return true; }
-            else { MessageBox.Show("No existe la tabla <<" + tabla + ">>"); return false; }
+            using (var cmd = new SqlCommand(
+                "INSERT INTO dbo.intentos_login (email, exitoso, fecha, razon) " +
+                "VALUES (@email, @exitoso, SYSDATETIME(), @razon)", cn, tx))
+            {
+                cmd.Parameters.AddWithValue("@email", email);
+                cmd.Parameters.AddWithValue("@exitoso", exitoso);
+                cmd.Parameters.AddWithValue("@razon", (object)razon ?? DBNull.Value);
+                cmd.ExecuteNonQuery();
+            }
         }
-
-        public void ConsultaDatos(string sql, string Tabla)
-        {
-            Ds.Tables.Clear();
-            Da = new SqlDataAdapter(sql, Conn);
-            Cmb = new SqlCommandBuilder(Da);
-            Da.Fill(Ds, Tabla);
-        }
-
-        public bool ConsultaItem(string tabla, string condicion)
-        {
-            Conn.Open();
-            string ConsultaItem = "Select Count(*) From " + tabla + " Where " + condicion;
-            Comando = new SqlCommand(ConsultaItem, Conn);
-            int i = Convert.ToInt32(Comando.ExecuteScalar());
-            Conn.Close();
-            if (i > 0) { return true; }
-            else { return false; } //MessageBox.Show("Registro NO existente"); 
-        }
-
-        public bool Insertar(string sql)
-        {
-            Conn.Open();
-            Comando = new SqlCommand(sql, Conn);
-            int i = Comando.ExecuteNonQuery();
-            Conn.Close();
-            if (i > 0) { return true; }
-            else { return false; }
-        }
-
-        public bool Actualizar(string tabla, string campos, string condicion)
-        {
-            Conn.Open();
-            string Actualizar = "Update " + tabla + " set " + campos + " Where " + condicion;
-            Comando = new SqlCommand(Actualizar, Conn);
-            int i = Comando.ExecuteNonQuery();
-            Conn.Close();
-            if (i > 0) { return true; }
-            else { return false; }
-        }
-
-        public bool ActualizarSinId(string tabla, string campos)
-        {
-            Conn.Open();
-            string Actualizar = "Update " + tabla + " set " + campos;
-            Comando = new SqlCommand(Actualizar, Conn);
-            int i = Comando.ExecuteNonQuery();
-            Conn.Close();
-            if (i > 0) { return true; }
-            else { return false; }
-        }
-
-        public bool Eliminar(string tabla, string condicion)
-        {
-            Conn.Open();
-            string Eliminar = "Delete From " + tabla + " Where " + condicion;
-            Comando = new SqlCommand(Eliminar, Conn);
-            int i = Comando.ExecuteNonQuery();
-            Conn.Close();
-            if (i > 0) { return true; }
-            else { return false; }
-        }
-        public void ConsultaDatosNC(string sql, string Tabla)
-        {
-            DsNC.Tables.Clear();
-            DaNC = new SqlDataAdapter(sql, Conn);
-            CmbNC = new SqlCommandBuilder(DaNC);
-            DaNC.Fill(DsNC, Tabla);
-        }      
     }
 }
